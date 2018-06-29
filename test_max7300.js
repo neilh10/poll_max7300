@@ -1,7 +1,12 @@
 #!/usr/bin/env node
+/* MAX3700AAZ - 36SSOP 
+   28Ports P4-P31
+   P31 can be configured as ACT HIGH INT by setting to be o/p
+*/
 var b = require('bonescript');
 var max7300 = require('../../node_modules/max7300aax/i2c-max7300');
-//var max7300 = require('i2c-max7300')
+var station_data = [0x0,0x01,0x02];
+
 /*Add Range 7bit is 0x40 to 0x4F
  * AD1 AD0     A3 2 1 0  Hex 
  * GND GND      0 0 0 0  40 
@@ -11,6 +16,7 @@ var max7300 = require('../../node_modules/max7300aax/i2c-max7300');
  * V+ GND       0 1 0 0  44
  * V+ V+        0 1 0 1  45
  * ......       ...........
+
 */
 var max = new max7300('/dev/i2c-2', 0x45);
 
@@ -18,26 +24,37 @@ var max = new max7300('/dev/i2c-2', 0x45);
 console.log("Starting:");
  max.getModeMax7300(function(data) //CMD 94
  {
-     console.log(data);
+     console.log("mode="+data);
  });
- /*TODO: write 0xff to Add 0x09->0x0F to set all ports to input with pullup
+  /*TODO: write 0xff to Add 0x09->0x0F to set all ports to input with pullup*/
+ max.setStatePinMax7300(0,0xff, function(data) {console.log("Set0="+data); });
+ max.setStatePinMax7300(1,0xff, function(data) {console.log("Set1="+data);});
+ /*
  Read 0x20 to 0x5F
  */
 // Polling interval
 setInterval(getStationHw, 2000);
-function readStations() {
- /* 0x09 7 reads Config
-  * 0x24:P4 ...0x39:P25
- */
- max.wire.readBytes(0x24,2,function(err,data)  // readBytes(cmd,1, function(err,data)
-    {
-       console.log(data);
-    }
 
-)}
+
+
 // read the station inputs
 function getStationHw() {
- console.log("getStationHw:");
- //readStations();
+   /*global station_data[5] = [0x0,0x01,0x02,0x03,0x05]; */
+   console.log("getStationHw:");
+   readStations(0);
+   readStations(1);
+   readStations(2);
+   console.log(station_data);
+}
 
+
+function readStations(port_num) {
+ /* 0x09 7bytes reads Config
+  * 0x24:P4 ...0x39:P25
+ */
+   max.getStateMax7300(port_num,function(data) {
+    // returns the states of pins
+    //console.log(data);
+     station_data[port_num]=data;
+   });
 }
