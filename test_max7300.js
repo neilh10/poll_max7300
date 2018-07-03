@@ -4,7 +4,8 @@
    P31 can be configured as ACT HIGH INT by setting to be o/p
 */
 var b = require('bonescript');
-var max7300 = require('../../node_modules/max7300aax/i2c-max7300');
+//var max7300 = require('../../node_modules/max7300aax/i2c-max7300');
+var station_max7300 = require('../../node_modules/max7300aax/i2c-max7300');
 var station_data = [0x0,0x01,0x02];
 
 /*Add Range 7bit is 0x40 to 0x4F
@@ -18,17 +19,18 @@ var station_data = [0x0,0x01,0x02];
  * ......       ...........
 
 */
-var max = new max7300('/dev/i2c-2', 0x45);
+var max = new station_max7300('/dev/i2c-2', 0x45);
 
 
 console.log("Starting:");
- max.getModeMax7300(function(data) //CMD 94
+/* max.getModestation-max7300(function(data) //CMD 94
  {
      console.log("mode="+data);
- });
+ });*/
   /*TODO: write 0xff to Add 0x09->0x0F to set all ports to input with pullup*/
- max.setStatePinMax7300(0,0xff, function(data) {console.log("Set0="+data); });
- max.setStatePinMax7300(1,0xff, function(data) {console.log("Set1="+data);});
+  //config on nibble 0,4,8,12,16,20,24
+ max.setConfigPinMax7300(0,0xff, function(data) {console.log("Set0="+data); });
+ max.setConfigPinMax7300(4,0xff, function(data) {console.log("Set5="+data);});
  /*
  Read 0x20 to 0x5F
  */
@@ -40,21 +42,27 @@ setInterval(getStationHw, 2000);
 // read the station inputs
 function getStationHw() {
    /*global station_data[5] = [0x0,0x01,0x02,0x03,0x05]; */
-   console.log("getStationHw:");
+   //console.log("getStationHw:");
    readStations(0);
-   readStations(1);
-   readStations(2);
-   console.log(station_data);
+   readStations(8);
+   readStations(16);
+   console.log("getStationHw:"+station_data);
 }
 
 
 function readStations(port_num) {
  /* 0x09 7bytes reads Config
   * 0x24:P4 ...0x39:P25
+  * 00-07 -> P04-11  - 8bits
+  * 08-15 -> P12-19  - 8bits
+  * 16-24 -> P20-27  - 8bits  
+  * 25+ error   (needs expanding if required)
  */
    max.getStateMax7300(port_num,function(data) {
     // returns the states of pins
     //console.log(data);
-     station_data[port_num]=data;
+    var data_i = port_num>>3;
+    station_data[port_num>>3]=data;
+    console.log("read"+port_num+"/"+data_i+"="+data);
    });
 }
